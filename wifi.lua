@@ -1,6 +1,10 @@
 local log = hs.logger.new('Wifi', 'debug')
 
 
+if alwaysHideMenu == false then
+    hs.menuIcon(true)
+end
+
 local wifiWatcher = nil
 local lastSSID = hs.wifi.currentNetwork()
 
@@ -19,7 +23,7 @@ function ssidChangedCallback()
         lastVolume = hs.audiodevice.defaultOutputDevice():outputVolume()
         hs.audiodevice.defaultOutputDevice():setVolume(0)
     else
-        if not alwaysHideMenu then
+        if alwaysHideMenu == false then
             hs.menuIcon(true)
         end
         
@@ -34,8 +38,6 @@ function ssidChangedCallback()
 end
 
 local wifiWatcher = hs.wifi.watcher.new(ssidChangedCallback):start()
-
-ssidChangedCallback()
 
 
 

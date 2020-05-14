@@ -12,16 +12,28 @@ alwaysHideMenu = false
 showNotificationsOnWifiChange = false
 
 -- protego indstillinger
-breachShowMethod = true -- true = dialog box | false = notification
+breachShowMethod = false -- true = dialog box | false = notification
+removeLockHotkey = "zxm"
+settingsHotkey = "zxm"
+naughtyWords = {"fuck", "porn"}
 
 
-
-
+dofile("./windows.lua")
 dofile("./protego.lua")
 dofile("./wifi.lua")
 
 
 -- bedre reload!
-hs.hotkey.bind({"cmd", "alt", "ctrl"}, "R", function()
-    hs.reload()
-end)
+function reloadConfig(files)
+    doReload = false
+    for _,file in pairs(files) do
+        if file:sub(-4) == ".lua" then
+            doReload = true
+        end
+    end
+    if doReload then
+        hs.reload()
+    end
+end
+myWatcher = hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", reloadConfig):start()
+hs.alert.show("Config loaded")

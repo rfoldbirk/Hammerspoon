@@ -1,134 +1,209 @@
-local log = hs.logger.new('Protego', 'debug')
-
-local PASSWORD = "enht"
-
-local str_arr = {}
-local trigger_words = {"porn", "hentai", "gay", "homoseksuel", "nude", "loli", "vagina", "penis", "dick", "pik"}
-
-local keycodes = hs.keycodes.map
-local BACKSLASH_KEY = 51
-local KeyDown_event = 10
-
-local breach_detected = false
-local allow_settings = false
-local attemps_to_open_settings = 0
-local breach_word = ""
+local log = hs.logger.new('Protector', 'debug')
 
 
-local keyEventtap = hs.eventtap.new({hs.eventtap.event.types.keyDown}, function(event)
-    local bundleId = string.lower(hs.application.frontmostApplication():bundleID())
-    local keyCode = event:getKeyCode()
-    local letter = keycodes[keyCode]
+max_length = 20
+keypress_history = {}
 
-    
-    if #str_arr > 25 then
-        table.remove(str_arr, 1)
-    end
-    
-    if (letter == "delete") then
-        table.remove(str_arr, #str_arr)
-    elseif (letter == "space") then
-        str_arr[#str_arr + 1] = " "
-    else
-        str_arr[#str_arr + 1] = letter
-    end
-    
+lockdown = false
+breach_word = ""
+deletableFields = 0
+allow_settingsHotkey = false
+attemps_to_open_settingsHotkey = 0
 
-    local actual_string = ""
-    
-    for i = 1, #str_arr, 1 do
-        actual_string = actual_string .. str_arr[i]
-    end
-    
-    for i = 1, #trigger_words, 1 do
-        if (string.match(actual_string:lower(), trigger_words[i])) then
-            breach_word = trigger_words[i]
-            
-            -- slet ordet
-            deleteWord(trigger_words[i])
-            
-            lock()
-        end
-        
-        if (allow_settings == false and string.match(actual_string:lower(), hs.base64.decode(PASSWORD))) then
-        	--deleteWord(hs.base64.decode(PASSWORD))
-            
-        	local oops = hs.eventtap.event.newKeyEvent({"cmd"}, 6, true)
-	        oops:post()
 
-            allow_settings = true
-            str_arr = {}
-            hs.application.launchOrFocus("/System/Applications/System Preferences.app")
-            attemps_to_open_settings = 0
-        end
+
+
+title = "Jeg er blevet krænket :("
+content = "Handling: "
+
+
+insertPoint = 0
+
+
+mouseE = hs.eventtap.new(
+{
+    hs.eventtap.event.types.mouseMoved,
+    hs.eventtap.event.types.leftMouseDown,
+    hs.eventtap.event.types.rightMouseDown,
+},
+function(event)
+    if lockdown then
+        hs.mouse.setAbsolutePosition({0, 0})
+        event:setType(0)
     end
 end):start()
 
 
-
-
-local appWatcher = hs.application.watcher.new(function(appName, eventType, appObject)
+appWatcher = hs.application.watcher.new(function(appName, eventType, appObject)
     if (appName ~= "System­indstillinger") then
         return
     end
     
     if (eventType == hs.application.watcher.activated) then
-        if (allow_settings == false) then
+        if (allow_settingsHotkey == false) then
             -- Bring all Finder windows forward when one gets activated
             appObject:kill()
-            attemps_to_open_settings = attemps_to_open_settings + 1
+            attemps_to_open_settingsHotkey = attemps_to_open_settingsHotkey + 1
             
-            if (attemps_to_open_settings > 1) then
-                breach_word = "forsøgte at åbne indstillingerne"
-                lock()
+            if (attemps_to_open_settingsHotkey > 1) then
+                caught("forsøgte at åbne indstillingerne")
             end
         end
     elseif (eventType == hs.application.watcher.terminated) then
-        allow_settings = false
+        allow_settingsHotkey = false
     end
-end):start()
+end)
+
+keyEventtap = hs.eventtap.new( {hs.eventtap.event.types.keyDown}, function(event)
+    key = hs.keycodes.map[event:getKeyCode()]
+
+    -- add
+    if key == "space" then
+        key = " "
+    end
+
+    if #key == 1 then
+        -- keypress_history[#keypress_history + 1] = key
+        if insertPoint > #keypress_history then
+            insertPoint = #keypress_history
+        end
+        table.insert(keypress_history, #keypress_history + 1 - insertPoint, key)
+    elseif key == "delete" then
+        if #keypress_history - insertPoint > 0 then
+            local cmded = event:getFlags():contain({"cmd"})
+            local alted = event:getFlags():contain({"alt"})
+            if cmded then
+                keypress_history = {}
+                insertPoint = 0
+            elseif alted then
+
+                local removeWord = ""
+                local canRemove = true
+                local onlySpaces = false
 
 
-local unlockWatcher = hs.caffeinate.watcher.new(function(event)
-    if (event == hs.caffeinate.watcher.screensDidUnlock) then 
-        -- gør mig selv opmærksom på krænkelse
-        if (breach_detected) then
-            breach_detected = false
-            if breachShowMethod then
-            	local answer = hs.dialog.blockAlert("Jeg er blevet krænket :(", "Handling: " .. breach_word, "Ok")
+                for i = #keypress_history, 1, -1 do
+                    local k = keypress_history[i]
+
+                    if k == " " then
+                        canRemove = false
+                        if #removeWord == 0 then
+                            onlySpaces = true
+                        end
+
+                        if onlySpaces then
+                            canRemove = true
+                        end
+                    else
+                        onlySpaces = false
+                    end
+
+                    if canRemove then
+                        removeWord = k .. removeWord
+                    end
+                end
+
+                removeFromHistory(removeWord, keypress_history)
             else
-            	hs.notify.new({title = "Jeg er blevet krænket :(", informativeText = "Handling: " .. breach_word}):send()
-        	end
+                table.remove(keypress_history, #keypress_history - insertPoint)
+            end
         end
     end
-end):start()
+
+    -- overflow prevention
+    controlHistory()
+    str = tableToString(keypress_history) 
+
+    log.i(str)
+
+    -- lockdown check / settingsHotkey manager
+    if lockdown then
+        if string.match(str, removeLockHotkey) then
+            disengage()
+        end
+
+        if deletableFields <= 0 then
+            event:setType(0)
+        else
+            deletableFields = deletableFields - 1
+        end
+        return
+    else
+        -- settingsHotkey
+        if string.match(str, settingsHotkey) and not allow_settingsHotkey then
+            deleteWord(settingsHotkey)
+            allow_settingsHotkey = true
+            hs.application.launchOrFocus("/System/Applications/System Preferences.app")
+        end
+    end
 
 
+    -- check for naughty words
+    for i = 1, #naughtyWords, 1 do
+        if string.match(str, naughtyWords[i]) then
+            caught(naughtyWords[i])
+        end
+    end
+end)
+
+
+function disengage()
+    lockdown = false
+    removeFromHistory(removeLockHotkey, keypress_history)
+
+    if breachShowMethod then
+        hs.dialog.blockAlert(title, content .. breach_word, "Ok")
+    else
+        hs.notify.new({title = title, informativeText = content .. breach_word}):send()
+    end
+end
+
+
+function removeFromHistory(word, arr)
+    for i=1, #word, 1 do
+        table.remove(arr, #arr - insertPoint)
+    end
+end
+
+function caught(word)
+    lockdown = true
+    deletableFields = #word
+    deleteWord(word)
+    breach_word = word
+end
+
+
+function cmdZ()
+    local cmdZ_event = hs.eventtap.event.newKeyEvent({"cmd"}, 6, true)
+    cmdZ_event:post()
+end
 
 function deleteWord(word)
     for x = 1, #word, 1 do
         local delete_event = hs.eventtap.event.newEvent()
-        delete_event:setType(KeyDown_event)
-        delete_event:setKeyCode(BACKSLASH_KEY)
+        delete_event:setType(10)
+        delete_event:setKeyCode(51)
         delete_event:post()
     end
 end
 
 
-function lock()
-    attemps_to_open_settings = 0
-    breach_detected = true
-    -- hs.brightness.set(10)
-    
-    -- tag et billede
-
-    -- lås computeren
-    if (hs.caffeinate.lockScreen()) then
-        
-    else
-        log.i("Der skete en fejl")
+function tableToString(arr)
+    local str = ""
+    for i = 1, #arr, 1 do
+        str = str .. arr[i]
     end
-
-    -- gør mig opmærksom næste gang jeg logger ind
-    str_arr = {}
+    return str
 end
+
+
+function controlHistory()
+    if #keypress_history > max_length then
+        table.remove(keypress_history, 1)
+    end
+end
+
+
+
+appWatcher:start()
+keyEventtap:start()
