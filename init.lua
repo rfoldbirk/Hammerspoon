@@ -1,23 +1,27 @@
 local log = hs.logger.new('Init', 'debug')
 
+
 -- lydstyrken bliver automatisk sænket til 0, hvis man åbner computeren mens man er på et andet netværk
 -- beskyttelse mod sjofle pranks
 -- beskyttelse mod Mikkel :)
+-- Man kan nu slå beskyttelsen fra :)
 -- automatisk fjernelse af Hammerspoon menuen, når man forlader hjemme netværket
 
 
 -- wifi indstillinger
-homeSSID = "foldberg"
+homeSSID = "..."
 alwaysHideMenu = false
 showNotificationsOnWifiChange = false
 
 -- protego indstillinger
 breachShowMethod = false -- true = dialog box | false = notification
-removeLockHotkey = "zxm"
-settingsHotkey = "zxm"
-naughtyWords = {"fuck", "porn"}
+removeProtegoHotkey = 'q1'
+removeLockHotkey = "q2"
+settingsHotkey = "q3"
+naughtyWords = {"ord 1", "ord 2", "ord 3"}
 
 
+dofile("./startFilming.lua")
 dofile("./windows.lua")
 dofile("./protego.lua")
 dofile("./wifi.lua")
@@ -36,4 +40,4 @@ function reloadConfig(files)
     end
 end
 myWatcher = hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", reloadConfig):start()
-hs.alert.show("Config loaded")
+-- hs.alert.show("Config loaded")

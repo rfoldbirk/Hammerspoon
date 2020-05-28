@@ -22,7 +22,7 @@ function(event)
 
 	flagged = f:contain({"alt", "cmd"})
 
-	log.i(flagged, key)
+	-- log.i(flagged, key)
 
 	if not flagged then
 		if key == "left" then
@@ -44,8 +44,8 @@ function(event)
 
 	local win = hs.window.focusedWindow()
 	local app = win:frame()
-	local screen = win:screen()
-	local window = screen:frame()
+	local window = win:screen():frame()
+
 
 	-- default
 	app.x = window.x

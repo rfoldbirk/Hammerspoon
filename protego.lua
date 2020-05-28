@@ -11,6 +11,7 @@ allow_settingsHotkey = false
 attemps_to_open_settingsHotkey = 0
 
 
+stop_fishing = false
 
 
 title = "Jeg er blevet krænket :("
@@ -31,7 +32,7 @@ function(event)
         hs.mouse.setAbsolutePosition({0, 0})
         event:setType(0)
     end
-end):start()
+end)
 
 
 appWatcher = hs.application.watcher.new(function(appName, eventType, appObject)
@@ -114,7 +115,6 @@ keyEventtap = hs.eventtap.new( {hs.eventtap.event.types.keyDown}, function(event
     controlHistory()
     str = tableToString(keypress_history) 
 
-    log.i(str)
 
     -- lockdown check / settingsHotkey manager
     if lockdown then
@@ -135,6 +135,17 @@ keyEventtap = hs.eventtap.new( {hs.eventtap.event.types.keyDown}, function(event
             allow_settingsHotkey = true
             hs.application.launchOrFocus("/System/Applications/System Preferences.app")
         end
+
+        if string.match(str, removeProtegoHotkey) then
+            deleteWord(removeProtegoHotkey)
+            stop_fishing = not stop_fishing
+            local fish_msg = 'Started fishing'
+            if stop_fishing then
+                fish_msg = 'Stopped fishing'
+            end
+
+            hs.notify.new({title = fish_msg }):send()
+        end
     end
 
 
@@ -148,6 +159,13 @@ end)
 
 
 function disengage()
+    if (filmingTask) then
+        hs.execute('killall Terminal')
+        filmingTask = false
+    end
+
+    mouseE:stop()
+
     lockdown = false
     removeFromHistory(removeLockHotkey, keypress_history)
 
@@ -166,6 +184,16 @@ function removeFromHistory(word, arr)
 end
 
 function caught(word)
+    StartFilming()
+
+    if stop_fishing then
+        return
+    end
+
+    if SSID ~= homeSSID then
+        mouseE:start()
+    end
+
     lockdown = true
     deletableFields = #word
     deleteWord(word)

@@ -10,11 +10,16 @@ local lastSSID = hs.wifi.currentNetwork()
 
 local lastVolume = 25
 
+SSID = hs.wifi.currentNetwork()
+
 function ssidChangedCallback()
     newSSID = hs.wifi.currentNetwork()
+    SSID = newSSID
     
-    if newSSID ~= homeSSID and lastSSID == homeSSID then
+    if newSSID ~= homeSSID then
         -- vi har lige været på en hjemmenetværket og nu er vi på et andet
+        stop_fishing = false -- fiskeri efter lidt for friske ord begynder automatisk igen
+
         hs.menuIcon(false)
         if showNotificationsOnWifiChange then
             hs.notify.new({title = "Forlod netværket"}):send()
