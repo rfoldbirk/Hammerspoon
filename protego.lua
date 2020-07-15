@@ -10,6 +10,8 @@ deletableFields = 0
 allow_settingsHotkey = false
 attemps_to_open_settingsHotkey = 0
 
+max_attempts = 2
+
 
 stop_fishing = false
 
@@ -35,18 +37,20 @@ function(event)
 end)
 
 
-appWatcher = hs.application.watcher.new(function(appName, eventType, appObject)
+settingWatcher = hs.application.watcher.new(function(appName, eventType, appObject)
     if (appName ~= "System­indstillinger") then
         return
     end
+
+    isHome()
     
     if (eventType == hs.application.watcher.activated) then
-        if (allow_settingsHotkey == false) then
+        if allow_settingsHotkey == false and not (settingsKill_DisableWhenHome and isHome()) then
             -- Bring all Finder windows forward when one gets activated
             appObject:kill()
             attemps_to_open_settingsHotkey = attemps_to_open_settingsHotkey + 1
             
-            if (attemps_to_open_settingsHotkey > 1) then
+            if (attemps_to_open_settingsHotkey > max_attempts) then
                 caught("forsøgte at åbne indstillingerne")
             end
         end
@@ -179,18 +183,30 @@ end
 
 function removeFromHistory(word, arr)
     for i=1, #word, 1 do
-        table.remove(arr, #arr - insertPoint)
+        local point = #arr - insertPoint
+
+        -- 1 <> #arr
+        if point < 1 or point > #arr then 
+            -- ved ærligt talt ikke hvorfor fejlen skete, men det gjorde den altså...
+            -- Dette burde gerne beskytte mod fejlen
+            goto continue 
+        end
+
+        table.remove(arr, point)
+
+        ::continue::
     end
 end
 
 function caught(word)
-    StartFilming()
-
     if stop_fishing then
+        removeFromHistory(word, keypress_history)
         return
     end
 
-    if SSID ~= homeSSID then
+    StartFilming()
+
+    if not isHome() then
         mouseE:start()
     end
 
@@ -233,5 +249,5 @@ end
 
 
 
-appWatcher:start()
+settingWatcher:start()
 keyEventtap:start()

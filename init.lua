@@ -8,19 +8,8 @@ local log = hs.logger.new('Init', 'debug')
 -- automatisk fjernelse af Hammerspoon menuen, når man forlader hjemme netværket
 
 
--- wifi indstillinger
-homeSSID = "..."
-alwaysHideMenu = false
-showNotificationsOnWifiChange = false
 
--- protego indstillinger
-breachShowMethod = false -- true = dialog box | false = notification
-removeProtegoHotkey = 'q1'
-removeLockHotkey = "q2"
-settingsHotkey = "q3"
-naughtyWords = {"ord 1", "ord 2", "ord 3"}
-
-
+dofile("./settings.lua")
 dofile("./startFilming.lua")
 dofile("./windows.lua")
 dofile("./protego.lua")
@@ -40,4 +29,4 @@ function reloadConfig(files)
     end
 end
 myWatcher = hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", reloadConfig):start()
--- hs.alert.show("Config loaded")
+hs.alert.show("Config loaded")

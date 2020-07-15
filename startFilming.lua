@@ -6,8 +6,7 @@ filmingTask = false
 function StartFilming()
 	filmingTask = true
 
-	-- film
-	-- ffmpeg -video_size 1280x720 -framerate 30 -f avfoundation -i "default" ~/Downloads/out.mpg
+	-- start med at filme :)
 
 	hs.timer.doAfter(0.2, function()
 		hs.execute('rm mugshots/movie.mpg')
